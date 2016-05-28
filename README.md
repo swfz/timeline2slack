@@ -1,5 +1,9 @@
 # timeline2slack
 
+premise to run in AWS Lambda and DynamoDB
+
+twitter timeline to slack channell.
+
 ## module install
 
 ```
