@@ -1,0 +1,6 @@
+{
+  "description": "twitter to slack function",
+  "runtime": "nodejs4.3",
+  "timeout": 300,
+  "handler": "sample.handle"
+}

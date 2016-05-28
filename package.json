@@ -1,0 +1,26 @@
+{
+  "name": "timeline2slack",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sample.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swfz/timeline2slack.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/swfz/timeline2slack/issues"
+  },
+  "homepage": "https://github.com/swfz/timeline2slack#readme",
+  "devDependencies": {
+    "aws-sdk": "^2.3.14",
+    "config": "^1.20.4",
+    "dynamodb-doc": "^1.0.0",
+    "slack-api-client": "^0.1.1",
+    "twitter": "^1.3.0"
+  }
+}
