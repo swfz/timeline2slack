@@ -47,21 +47,23 @@ function make_attachement(tweet) {
 }
 
 function post2slack(attachments){
-  var slackToken = config.slack.token;
-  var slackApiClient = require('slack-api-client');
-  var slack = new slackApiClient(slackToken);
+  return new Promise(function(resolve,reject){
+    var slackToken = config.slack.token;
+    var slackApiClient = require('slack-api-client');
+    var slack = new slackApiClient(slackToken);
 
-  slack.api.chat.postMessage({
-    channel: config.slack.channel,
-    username: config.slack.username,
-    text: attachments.length + '/' + config.divide_count + 'tweets',
-    attachments: JSON.stringify( attachments ),
-  }, function (err,res){
-    if (err) {
-      console.log(err);
-      console.log(res);
-    }
-    console.log("posted " + attachments.length + " tweet. " + attachments[0].fields[0].title + " TO " + attachments[attachments.length - 1].fields[0].title );
+    slack.api.chat.postMessage({
+      channel: config.slack.channel,
+      username: config.slack.username,
+      text: attachments.length + '/' + config.divide_count + 'tweets',
+      attachments: JSON.stringify( attachments ),
+    }, function (err,res){
+      if (err) {
+        console.log(err);
+        console.log(res);
+      }
+      resolve("posted " + attachments.length + " tweet. " + attachments[0].fields[0].title + " TO " + attachments[attachments.length - 1].fields[0].title );
+    });
   });
 }
 
@@ -89,16 +91,16 @@ var result = client.get('statuses/home_timeline', params, function(error, tweets
         attachments.push( make_attachement(tweet) );
       });
 
-      var seq = Promise.resolve();
-      divided_attachements = attachments.reverse().divide(config.divide_count).reverse();
-      divided_attachements.forEach(function(partial_attachments){
-        seq = seq.then(function(){
-          return partial_attachments;
-        })
-        .then(post2slack)
-      });
+      divided_attachements = attachments.reverse().divide(config.divide_count);
+      divided_attachements.reduce(function(promise,partial_attachments){
+        return promise.then(function(result){
+          console-log(result);
+          return post2slack(partial_attachments);
+        });
+      },
+        Promise.resolve()
+      );
 
-      // console.dir(tweets);
       var tweet_ids = tweets.map(function(element, index, array){
         return element.id
       });
@@ -125,7 +127,7 @@ function read_last_id(){
     var async_getitem = new Promise(function(resolve,reject){
       dynamo.getItem(params,function(err, data){
         var last_id = 0;
-        if ( data.Item ) {
+        if ( data && data.Item ) {
           last_id = data.Item.value;
         }
         console.log(last_id);
