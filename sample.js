@@ -61,7 +61,7 @@ exports.handle = function(event, context) {
         if (err) {
           console.log(err);
           console.log(res);
-        }
+        };
         resolve("posted " + attachments.length + " tweet. " + attachments[0].fields[0].title + " TO " + attachments[attachments.length - 1].fields[0].title );
       });
     });
@@ -94,7 +94,7 @@ exports.handle = function(event, context) {
         divided_attachements = attachments.reverse().divide(config.divide_count);
         divided_attachements.reduce(function(promise,partial_attachments){
           return promise.then(function(result){
-            console-log(result);
+            console.log(result);
             return post2slack(partial_attachments);
           });
         },
