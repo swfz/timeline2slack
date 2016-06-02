@@ -91,7 +91,7 @@ exports.handle = function(event, context) {
           attachments.push( make_attachement(tweet) );
         });
 
-        divided_attachements = attachments.reverse().divide(config.divide_count).reverse();
+        divided_attachements = attachments.reverse().divide(config.divide_count);
         divided_attachements.reduce(function(promise,partial_attachments){
           return promise.then(function(result){
             console.log(result);
