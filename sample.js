@@ -1,4 +1,5 @@
 exports.handle = function(event, context) {
+  process.env.TZ = 'Asia/Tokyo';
   var config = require('config');
 
   var pfunc = function(err, data) {
@@ -62,7 +63,9 @@ exports.handle = function(event, context) {
           console.log(err);
           console.log(res);
         };
-        resolve("posted " + attachments.length + " tweet. " + attachments[0].fields[0].title + " TO " + attachments[attachments.length - 1].fields[0].title );
+        var log = "posted " + attachments.length + " tweet. " + attachments[0].fields[0].title + " TO " + attachments[attachments.length - 1].fields[0].title;
+        console.log(log);
+        resolve(log);
       });
     });
   }
@@ -149,7 +152,6 @@ exports.handle = function(event, context) {
       divided_attachements = attachments.reverse().divide(config.divide_count);
       divided_attachements.reduce(function(promise,partial_attachments){
         return promise.then(function(result){
-          console.log(result);
           return post2slack(partial_attachments);
         });
       },
