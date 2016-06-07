@@ -67,7 +67,7 @@ exports.handle = function(event, context) {
     });
   }
 
-  function read_last_id(){
+  function read_posted_tweet(){
     return new Promise(function(resolve,reject){
       var dynamo = dynamo_client();
       var params = {
@@ -77,32 +77,30 @@ exports.handle = function(event, context) {
         }
       }
 
-      var last_id = 0;
       var async_getitem = new Promise(function(resolve,reject){
         dynamo.getItem(params,function(err, data){
-          var last_id = 0;
+          var posted = [];
           if ( data && data.Item ) {
-            last_id = data.Item.value;
+            posted = JSON.parse(data.Item.value);
           }
-          console.log('last_id: ' + last_id);
-          resolve(last_id);
+          resolve(posted);
         });
       });
 
-      async_getitem.then(function(last_id){
-        resolve(last_id);
+      async_getitem.then(function(posted){
+        resolve(posted);
       });
     });
   }
 
-  function write_last_id( last_id ){
+  function write_posted_tweet( posted_tweet ){
     var dynamo = dynamo_client();
 
     var params = {
       TableName: config.dynamo.table,
       Item: {
         key: config.dynamo.key,
-        value: last_id
+        value: posted_tweet
       }
     };
 
@@ -120,18 +118,25 @@ exports.handle = function(event, context) {
     return dynamo;
   }
 
+  function is_already_posted(posted,index,array){
+    return this.id == posted.tweet_id;
+  }
+
   function timeline2slack(error,tweets,response){
     if (error) {
       console.log(error);
       return;
     }
 
-    var async_read_last_id = read_last_id();
-    async_read_last_id.then(function(last_id){
+    var async_read_posted = read_posted_tweet();
+    async_read_posted.then(function(posted){
 
-      console.log('tweets count: ' + tweets.length);
-      var filtered_tweets = tweets.filter(function(element,index,array){
-        return ( element.id > last_id );
+      console.log('tweet count: ' + tweets.length);
+      var filtered_tweets = tweets.filter(function(tweet,index,array){
+        if ( posted.length == 0 ){
+          return true;
+        }
+        return ( !posted.some(is_already_posted, tweet) );
       });
 
       console.log('filtered_tweet: ' + filtered_tweets.length);
@@ -151,11 +156,11 @@ exports.handle = function(event, context) {
         Promise.resolve()
       );
 
-      var tweet_ids = tweets.map(function(element, index, array){
-        return element.id
+      var posted_tweet = tweets.map(function(tweet, index, array){
+        return {tweet_id: tweet.id, posted: tweet.created_at};
       });
-      write_last_id( Math.max.apply(null, tweet_ids ) )
-      context.succeed(Math.max.apply(null, tweet_ids ));
+      write_posted_tweet( JSON.stringify(posted_tweet) )
+      context.succeed(Math.max.apply(null, posted_tweet ));
     });
   }
 
@@ -168,6 +173,5 @@ exports.handle = function(event, context) {
   });
 
   var params = { count: config.tweet_count };
-  var result = twitter_client.get('statuses/home_timeline', params, timeline2slack);
-
+  twitter_client.get('statuses/home_timeline', params, timeline2slack);
 }
