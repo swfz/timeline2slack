@@ -160,7 +160,7 @@ exports.handle = function(event, context) {
         return {tweet_id: tweet.id, posted: tweet.created_at};
       });
       write_posted_tweet( JSON.stringify(posted_tweet) )
-      context.succeed(Math.max.apply(null, posted_tweet ));
+      context.succeed( {"to slack tweets": filtered_tweets.length} );
     });
   }
 
