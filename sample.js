@@ -13,16 +13,16 @@ exports.handle = function(event, context) {
   Array.prototype.divide = function(n){
     var array = this;
     var index = 0;
-    var results = [];
+    var divided_array = [];
     var length  = array.length;
 
     while ( index < length ) {
-      var result = array.slice(index,index+n);
-      results.push(result);
+      var partial = array.slice(index,index+n);
+      divided_array.push(partial);
       index = index + n;
     }
 
-    return results;
+    return divided_array;
   }
 
   function make_attachement(tweet) {
@@ -67,52 +67,6 @@ exports.handle = function(event, context) {
     });
   }
 
-  var Twitter = require('twitter');
-  var client = new Twitter({
-    consumer_key: config.twitter.consumer_key,
-    consumer_secret: config.twitter.consumer_secret,
-    access_token_key: config.twitter.access_token_key,
-    access_token_secret: config.twitter.access_token_secret
-  });
-
-  var params = { count: config.tweet_count };
-  var result = client.get('statuses/home_timeline', params, function(error, tweets, response){
-    if (!error) {
-
-      var async_read_last_id = read_last_id();
-      async_read_last_id.then(function(result){
-
-        var filtered_tweets = tweets.filter(function(element,index,array){
-          return ( element.id > result );
-        });
-
-        attachments = [];
-        filtered_tweets.forEach(function(tweet){
-          attachments.push( make_attachement(tweet) );
-        });
-
-        divided_attachements = attachments.reverse().divide(config.divide_count);
-        divided_attachements.reduce(function(promise,partial_attachments){
-          return promise.then(function(result){
-            console.log(result);
-            return post2slack(partial_attachments);
-          });
-        },
-          Promise.resolve()
-        );
-
-        var tweet_ids = tweets.map(function(element, index, array){
-          return element.id
-        });
-        write_last_id( Math.max.apply(null, tweet_ids ) )
-        context.succeed(Math.max.apply(null, tweet_ids ));
-      });
-    }
-    else {
-      console.log(error);
-    }
-  });
-
   function read_last_id(){
     return new Promise(function(resolve,reject){
       var dynamo = dynamo_client();
@@ -130,13 +84,12 @@ exports.handle = function(event, context) {
           if ( data && data.Item ) {
             last_id = data.Item.value;
           }
-          console.log(last_id);
+          console.log('last_id: ' + last_id);
           resolve(last_id);
         });
       });
 
-      async_getitem.then(function(result){
-        last_id = result;
+      async_getitem.then(function(last_id){
         resolve(last_id);
       });
     });
@@ -166,4 +119,55 @@ exports.handle = function(event, context) {
 
     return dynamo;
   }
+
+  function timeline2slack(error,tweets,response){
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    var async_read_last_id = read_last_id();
+    async_read_last_id.then(function(last_id){
+
+      console.log('tweets count: ' + tweets.length);
+      var filtered_tweets = tweets.filter(function(element,index,array){
+        return ( element.id > last_id );
+      });
+
+      console.log('filtered_tweet: ' + filtered_tweets.length);
+
+      attachments = [];
+      filtered_tweets.forEach(function(tweet){
+        attachments.push( make_attachement(tweet) );
+      });
+
+      divided_attachements = attachments.reverse().divide(config.divide_count);
+      divided_attachements.reduce(function(promise,partial_attachments){
+        return promise.then(function(result){
+          console.log(result);
+          return post2slack(partial_attachments);
+        });
+      },
+        Promise.resolve()
+      );
+
+      var tweet_ids = tweets.map(function(element, index, array){
+        return element.id
+      });
+      write_last_id( Math.max.apply(null, tweet_ids ) )
+      context.succeed(Math.max.apply(null, tweet_ids ));
+    });
+  }
+
+  var Twitter = require('twitter');
+  var twitter_client = new Twitter({
+    consumer_key: config.twitter.consumer_key,
+    consumer_secret: config.twitter.consumer_secret,
+    access_token_key: config.twitter.access_token_key,
+    access_token_secret: config.twitter.access_token_secret
+  });
+
+  var params = { count: config.tweet_count };
+  var result = twitter_client.get('statuses/home_timeline', params, timeline2slack);
+
 }
