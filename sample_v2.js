@@ -29,22 +29,32 @@ exports.handle = function(event, context) {
 
   function makeAttachement(tweet) {
     const posted     = Date.parse( tweet.created_at );
-    const postedDate = new Date(posted);
     const postedLink = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}`;
 
-    dump(tweet);
+    // dump(tweet);
     // slackAPIのpayloadで使用するためsnake case
-    const attachment = {
+
+    var attachment = {
       color: "#334fa6",
       text: tweet.text,
+      title: "to post",
+      title_link: postedLink,
       author_name: tweet.user.name,
       author_link: `https://twitter.com/${tweet.user.screen_name}`,
       author_icon: tweet.user.profile_image_url_https,
-      fields: [{
-        title: `Posted: ${postedDate.toLocaleString()}`,
-        value: postedLink,
-        short: false
-      }]
+      fields: [],
+      footer: "Posted: ",
+      ts: posted / 1000
+    }
+
+    if ( tweet.entities.media ) {
+      attachment["thumb_url"] = tweet.entities.media[0].media_url
+      if ( tweet.entities.media.length > 1 ){ attachment["title"] = "to post. media more posted :rainbow:"; }
+    }
+    if ( tweet.entities.user_mentions ) {
+      tweet.entities.user_mentions.forEach(function(user){
+        attachment.fields.push({title: `@${user.screen_name}(${user.name})`, value: `https://twitter.com/${user.screen_name}`, short: true});
+      });
     }
 
     return attachment;
@@ -59,11 +69,13 @@ exports.handle = function(event, context) {
       slack.api.chat.postMessage({
         channel: config.slack.channel,
         username: config.slack.username,
-        text: attachments.length + '/' + config.divideCount + 'tweets',
+        text: `${attachments.length}/${config.divideCount}tweets`,
         attachments: JSON.stringify( attachments ),
       }, function (err,res){
         if (err) { util.log(err); util.log(res); };
-        const log = `posted ${attachments.length} tweet. ${attachments[0].fields[0].title} TO ${attachments[attachments.length - 1].fields[0].title}`;
+        const startDate = new Date(attachments[0].ts * 1000);
+        const endDate   = new Date(attachments[attachments.length - 1].ts * 1000);
+        const log = `posted ${attachments.length} tweet. ${startDate} TO ${endDate}`;
         util.log(log);
         resolve(log);
       });
@@ -138,9 +150,7 @@ exports.handle = function(event, context) {
       util.log(`filtered_tweet: ${filteredTweets.length}`);
 
       attachments = [];
-      filteredTweets.forEach(function(tweet){
-        attachments.push( makeAttachement(tweet) );
-      });
+      filteredTweets.forEach( tweet => attachments.push( makeAttachement(tweet) ) );
 
       divided_attachements = attachments.reverse().divide(config.divideCount);
       divided_attachements.reduce(function(promise,partialAttachements){
@@ -151,7 +161,6 @@ exports.handle = function(event, context) {
 
       const postedTweet = tweets.map( (tweet, index, array) => ( {tweet_id: tweet.id, posted: tweet.created_at} ) );
       writePostedTweet( JSON.stringify(postedTweet) )
-      context.succeed( {"to slack tweets": filteredTweets.length} );
     });
   }
 
