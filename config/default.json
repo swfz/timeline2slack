@@ -1,6 +1,6 @@
 {
-  "tweet_count": 50,
-  "divide_count": 5,
+  "tweetCount": 50,
+  "divideCount": 5,
   "dynamo": {
     "table": "tw2slack",
     "key": "last_post_id",
@@ -11,7 +11,7 @@
       "channel": "#",
       "username": "tw feed",
       "token": ""
-    },
+  },
   "twitter": {
       "consumer_key": "",
       "consumer_secret": "",
